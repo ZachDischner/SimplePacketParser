@@ -30,7 +30,8 @@ typedef struct Packet{
 // Functions
 int main(int argc, char* argv[]);
 FILE* loadFileFromArgs(char* filename);
-int print_packet(Packet packet);
+int extractPacket(FILE* packet_file, Packet* packet);
+int printPacket(Packet packet);
 
 // Execution variables
 int packet_fd;

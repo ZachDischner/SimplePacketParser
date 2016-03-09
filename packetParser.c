@@ -6,12 +6,13 @@
  * README                                                                  
  *                                                                       
  * Assumptions:                                                          
- *      1. 'Packet headers' always describe valid packets.               
+ *      1. 'Packet headers' nearly always describe valid packets.               
  *          -Do not check to see if the actual packet data appears to be 
  *           shorter or longer than the "payload length" specification in
- *           the packet header.                                          
- *          -Do not verify that the file itself contains "payload length"
- *           amounts of data                                             
+ *           the packet header.                                       
+ *          -The only place where 'invalid' packets are checked is to verify 
+ *           that the file contains at least "payload length" bytes left to
+ *           be read.                                             
  *      2. File data in between valid packets is superflous. Ignore and  
  *         just proceed to the next valid packet                         
  ****************************************************************************/
@@ -37,24 +38,33 @@ int main(int argc, char* argv[])
         3. Print the packet extracted at that location
     */
 
-    uint8_t b1, b2;  /* Two bytes used to store and identify packet starts */
-    int cnt = 0;
-    fread( &b1, sizeof(b1), 1, packet_file);
+    uint8_t b1, b2;     // Two bytes used to store and identify packet starts 
+    int packetCount = 0;
+    Packet packet;      // Packet struct storage container for packet information 
+    fread( &b1, sizeof(b1), 1, packet_file);  //read first byte of file
     while (!feof(packet_file)) 
     {
+        /* Read next byte from the file.
+            See if previous byte (b1) and next byte (b2) == 0x21 and 0x22 respectively
+            If so, the next dataset in the file is a packet to be parsed
+        */
         fread( &b2, sizeof(b2), 1, packet_file);
         if ( (b1 == 0x21) & (b2 == 0x22))
         {
-            cnt++;
-            Packet packet;
-            fread( &packet.payload_length, sizeof(packet.payload_length), 1, packet_file);
-            fread( &packet.payload_data, packet.payload_length, 1, packet_file);
-            print_packet(packet);
+            // Populate packet stctuc with the payload_length, then the next payload_length number of bytes 
+            // fread( &packet.payload_length, sizeof(packet.payload_length), 1, packet_file);
+            // fread( &packet.payload_data, packet.payload_length, 1, packet_file);
+            // Valid packet starts here. Extract.
+            extractPacket(packet_file, &packet);
+            if (packet.packet_valid == 1) {packetCount++;}
 
-    }
-        b1 = b2;
+            // Print out packet 
+            printPacket(packet);
+
+        }
+        b1 = b2; /* Second byte becomes the first byte nex time around in [b1,b2] == 0x2122*/
     }   
-    fprintf(stderr, "Successfully parsed %d packets\n\n",cnt);
+    fprintf(stderr, "Successfully parsed %d packets\n\n",packetCount);
     fclose(packet_file);
     exit(EXIT_SUCCESS);
 }
@@ -62,7 +72,8 @@ int main(int argc, char* argv[])
 /**
  * @brief Attempt to load a file by name
  *
- * Basic function, just takes a filename string and attempts to load the thing. 
+ * Basic function, just takes a filename string and attempts to load the thing. If the filenam
+ * isn't available or can't be opened, exit the program. 
  * 
  * @param filename Character array indicating filename relative to executable to load
  * @return theFile FILE pointer http://www.tutorialspoint.com/ansi_c/c_working_with_files.htm
@@ -82,8 +93,44 @@ FILE* loadFileFromArgs(char* filename)
     return theFile;
 }
 
-int print_packet(Packet packet)
+int extractPacket(FILE* packet_file, Packet* packet)
 {
+    // Populate packet stctuc with the payload_length, then the next payload_length number of bytes 
+    fread( &packet->payload_length, sizeof(packet->payload_length), 1, packet_file);
+    
+    /* Verify that there is at least 'payload_length' number of bytes left in the file
+        This is the only 'incomplete' packet detection logic implemented
+        1. Get current position in file
+        2. Seek to the end of the file
+        3. Get the difference between the current position and the end of the file (num bytes)
+        4. Compare against packet header "payload length". 
+        5. Mark packet as invalid (but still read the data just to close out the file)
+    */
+    int currpos = ftell(packet_file);
+    fseek(packet_file, 0L, SEEK_END);
+    int filesize = ftell(packet_file);   
+    fseek(packet_file, currpos, SEEK_SET); 
+    fread( &packet->payload_data, packet->payload_length, 1, packet_file);
+    packet->packet_valid = 1;
+    if ((filesize - currpos) < packet->payload_length)
+    {
+        fprintf(stderr,"Packet specifies %d bytes of packet_data, but only %d bytes remain in file. Marking as invalid\n",packet->payload_length, filesize - currpos );
+        packet->packet_valid = 0;
+    }
+    // No further error checking is performed, packet assumed to be valid
+    return 0;
+}
+
+int printPacket(Packet packet)
+{
+    // Ignore invalid packet
+    if (packet.packet_valid == 0)
+    {
+        return 0;
+    }
+
+    // Print out formatted packet data
+    // ex: { 3} 11 22 FF
     printf("{%3d}",packet.payload_length);
     for (int bin = 0; bin < packet.payload_length; bin++)
     {
