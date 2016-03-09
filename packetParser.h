@@ -18,13 +18,6 @@
 // Error tracking variables
 extern int errno;
 
-// Functions
-int main(int argc, char* argv[]);
-
-// Execution variables
-int packet_fd;
-char* packet_filename;
-
 // Structure to store a packet of data
 typedef struct Packet{
     uint8_t payload_length;
@@ -33,5 +26,14 @@ typedef struct Packet{
     uint8_t payload_data[258];
     int packet_valid;   
 } Packet;
+
+// Functions
+int main(int argc, char* argv[]);
+FILE* loadFileFromArgs(char* filename);
+int print_packet(Packet packet);
+
+// Execution variables
+int packet_fd;
+char* packet_filename;
 #endif /* packetParser_h */
 
