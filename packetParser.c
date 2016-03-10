@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
             if (packet.packet_valid == 1) {packetCount++;}
 
             // Print out packet 
-            printPacket(packet);
+            printPacket(&packet);
 
         }
         b1 = b2; /* Second byte becomes the first byte nex time around in [b1,b2] == 0x2122*/
@@ -93,6 +93,18 @@ FILE* loadFileFromArgs(char* filename)
     return theFile;
 }
 
+/*
+ * @brief Extract a packet from a serial data stream
+ *
+ * Assumes that the stream's read position now points at the start of a packet. Extracts the number
+ * of bytes from the stream as specified by the packet header at the beginning of the stream and 
+ * populate a Packet data structure with data. Minimal packet content checking marks a packet as 
+ * invalid if the packet header suggests that the file is too small to accommodate
+ * 
+ * @param packet_file FILE steam pointer containing packet data
+ * @param packet Pointer to a packet data structure to be filled (returned by reference)
+ * @return _ 0/1 success/failure indicator. Failure criteria not yet defined so always returns 0...
+ */
 int extractPacket(FILE* packet_file, Packet* packet)
 {
     // Populate packet stctuc with the payload_length, then the next payload_length number of bytes 
@@ -104,37 +116,46 @@ int extractPacket(FILE* packet_file, Packet* packet)
         2. Seek to the end of the file
         3. Get the difference between the current position and the end of the file (num bytes)
         4. Compare against packet header "payload length". 
-        5. Mark packet as invalid (but still read the data just to close out the file)
+        5. Mark packet as invalid if not enough data exists in the file (but still read the data just to close out the file)
     */
-    int currpos = ftell(packet_file);
+    int current_position = ftell(packet_file);
     fseek(packet_file, 0L, SEEK_END);
     int filesize = ftell(packet_file);   
-    fseek(packet_file, currpos, SEEK_SET); 
+    fseek(packet_file, current_position, SEEK_SET); 
     fread( &packet->payload_data, packet->payload_length, 1, packet_file);
     packet->packet_valid = 1;
-    if ((filesize - currpos) < packet->payload_length)
+    if ((filesize - current_position) < packet->payload_length)
     {
-        fprintf(stderr,"Packet specifies %d bytes of packet_data, but only %d bytes remain in file. Marking as invalid\n",packet->payload_length, filesize - currpos );
+        fprintf(stderr,"Packet specifies %d bytes of packet_data, but only %d bytes remain in file. Marking as invalid\n",packet->payload_length, filesize - current_position );
         packet->packet_valid = 0;
     }
     // No further error checking is performed, packet assumed to be valid
     return 0;
 }
 
-int printPacket(Packet packet)
+/*
+ * @brief Prints a packet data structure
+ *
+ * Takes a packet data structure, print it out according to the README specifications. Do nothing for
+ * invalid packets
+ * 
+ * @param packet Packet data structure to print out
+ * @return _ 0/1 success/failure indicator. Failure criteria not yet defined so always returns 0...
+ */
+int printPacket(Packet* packet)
 {
     // Ignore invalid packet
-    if (packet.packet_valid == 0)
+    if (packet->packet_valid == 0)
     {
         return 0;
     }
 
     // Print out formatted packet data
     // ex: { 3} 11 22 FF
-    printf("{%3d}",packet.payload_length);
-    for (int bin = 0; bin < packet.payload_length; bin++)
+    printf("{%3d}",packet->payload_length);
+    for (int bin = 0; bin < packet->payload_length; bin++)
     {
-        printf(" %02X",packet.payload_data[bin]);
+        printf(" %02X",packet->payload_data[bin]);
     }
     printf("\n");
     return 0;

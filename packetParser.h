@@ -18,7 +18,14 @@
 // Error tracking variables
 extern int errno;
 
-// Structure to store a packet of data
+/*  Structure to store a packet of data
+    Nothing too fancy for now, just provide a container a packet dataset 
+    consisting of:
+        * payload_length 
+        * payload_data
+        * packet_valid
+*/
+
 typedef struct Packet{
     uint8_t payload_length;
     /* Know maximum size, might as well just define and not worry about 
@@ -31,7 +38,7 @@ typedef struct Packet{
 int main(int argc, char* argv[]);
 FILE* loadFileFromArgs(char* filename);
 int extractPacket(FILE* packet_file, Packet* packet);
-int printPacket(Packet packet);
+int printPacket(Packet* packet);
 
 // Execution variables
 int packet_fd;
