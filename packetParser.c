@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
     // Argument provided, assume it is the packetfile. Attempt to open.
     char* packet_filename = argv[1];
-    FILE* packet_file= NULL;
+    FILE* packet_file = NULL;
     loadFile(packet_filename, &packet_file);
 
     /* Read through the file and extract packets

@@ -45,7 +45,7 @@ def testPacketParser(fname):
                     print "Truth\n{0}\nFailed\n{1}\n".format(truth, output)
                     status = False
     except:
-        print "probrem"
+        print "Problem parsing file {0}".format(fname)
         status = False
     print "---------------------------------------------------------------\n\n"
     return status 
