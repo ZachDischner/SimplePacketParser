@@ -30,7 +30,8 @@ int main(int argc, char* argv[])
 
     // Argument provided, assume it is the packetfile. Attempt to open.
     char* packet_filename = argv[1];
-    FILE* packet_file = loadFileFromArgs(packet_filename);
+    FILE* packet_file= NULL;
+    loadFile(packet_filename, &packet_file);
 
     /* Read through the file and extract packets
         1. Read file until 0x2122 start indicator is found
@@ -76,13 +77,12 @@ int main(int argc, char* argv[])
  * isn't available or can't be opened, exit the program. 
  * 
  * @param filename Character array indicating filename relative to executable to load
- * @return theFile FILE pointer http://www.tutorialspoint.com/ansi_c/c_working_with_files.htm
+ * @param theFile pointer to FILE pointer. Passed by reference for use in calling function. http://www.tutorialspoint.com/ansi_c/c_working_with_files.htm
  */
-FILE* loadFileFromArgs(char* filename)
+void loadFile(char* filename, FILE** theFile)
 {
-    FILE* theFile;
     fprintf(stderr, "Attempting to read provided file: '%s'\n", filename);
-    if ( (theFile = fopen(filename, "r")) == NULL )
+    if ( (*theFile = fopen(filename, "r")) == NULL )
     {
         // Problem occured opening the file. 
         char* errorString = strerror(errno);
@@ -90,7 +90,6 @@ FILE* loadFileFromArgs(char* filename)
         exit(EXIT_FAILURE);
     }
     fprintf(stderr, "File opened succesfully: %s\n", filename);
-    return theFile;
 }
 
 /*

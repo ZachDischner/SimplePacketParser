@@ -36,7 +36,7 @@ typedef struct Packet{
 
 // Functions
 int main(int argc, char* argv[]);
-FILE* loadFileFromArgs(char* filename);
+void loadFile(char* filename, FILE** theFile2);
 int extractPacket(FILE* packet_file, Packet* packet);
 int printPacket(Packet* packet);
 
