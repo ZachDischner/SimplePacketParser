@@ -38,7 +38,6 @@ int main(int argc, char* argv[])
         2. Extract packet starting at that location with a function
         3. Print the packet extracted at that location
     */
-
     uint8_t b1, b2;     // Two bytes used to store and identify packet starts 
     int packetCount = 0;
     Packet packet;      // Packet struct storage container for packet information 
@@ -56,7 +55,10 @@ int main(int argc, char* argv[])
             // fread( &packet.payload_length, sizeof(packet.payload_length), 1, packet_file);
             // fread( &packet.payload_data, packet.payload_length, 1, packet_file);
             // Valid packet starts here. Extract.
-            extractPacket(packet_file, &packet);
+            if (extractPacket(packet_file, &packet) != 0)
+                {
+                    fprintf(stderr, "Error extracting packet from file. Ignoring\n" );
+                }
             if (packet.packet_valid == 1) {packetCount++;}
 
             // Print out packet 
@@ -102,13 +104,18 @@ void loadFile(char* filename, FILE** theFile)
  * 
  * @param packet_file FILE steam pointer containing packet data
  * @param packet Pointer to a packet data structure to be filled (returned by reference)
- * @return _ 0/1 success/failure indicator. Failure criteria not yet defined so always returns 0...
+ * @return _ 0/1 success/failure indicator. 
  */
 int extractPacket(FILE* packet_file, Packet* packet)
 {
+    int res;
     // Populate packet stctuc with the payload_length, then the next payload_length number of bytes 
-    fread( &packet->payload_length, sizeof(packet->payload_length), 1, packet_file);
-    
+    if ((res = fread( &packet->payload_length, sizeof(packet->payload_length), 1, packet_file)) != 1)
+    {
+        fprintf(stderr,"Problem reading from payload_length header. Marking packet as invalid and returning\n");
+        packet->packet_valid = 0;
+        return 1;
+    }
     /* Verify that there is at least 'payload_length' number of bytes left in the file
         This is the only 'incomplete' packet detection logic implemented
         1. Get current position in file
@@ -121,7 +128,12 @@ int extractPacket(FILE* packet_file, Packet* packet)
     fseek(packet_file, 0L, SEEK_END);
     int filesize = ftell(packet_file);   
     fseek(packet_file, current_position, SEEK_SET); 
-    fread( &packet->payload_data, packet->payload_length, 1, packet_file);
+    if ((res = fread( &packet->payload_data, packet->payload_length, 1, packet_file)) != 1)
+    {
+        fprintf(stderr,"Problem reading payload_data from file. Marking packet as invalid and returning\n");
+        packet->packet_valid = 0;
+        return 1;
+    }
     packet->packet_valid = 1;
     if ((filesize - current_position) < packet->payload_length)
     {
@@ -152,7 +164,8 @@ int printPacket(Packet* packet)
     // Print out formatted packet data
     // ex: { 3} 11 22 FF
     printf("{%3d}",packet->payload_length);
-    for (int bin = 0; bin < packet->payload_length; bin++)
+    int bin; // Declaring here because in-for-loop declarations are not allowed sometimes??
+    for (bin = 0; bin < packet->payload_length; bin++)
     {
         printf(" %02X",packet->payload_data[bin]);
     }

@@ -1,3 +1,5 @@
 *.dblite
 packetParser
 *.o
+.redo
+
